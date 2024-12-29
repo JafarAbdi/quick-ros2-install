@@ -47,6 +47,8 @@ fi
 # Installation based on https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html
 info "Installing ROS 2 $distro"
 
+export DEBIAN_FRONTEND=noninteractive
+
 locale  # check for UTF-8
 
 sudo apt update && sudo apt install locales
@@ -66,7 +68,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 sudo apt update
 sudo apt upgrade -y
 # tzdata will prompt for user input, so we need to avoid that
-sudo DEBIAN_FRONTEND=noninteractive sudo apt install -y ros-${distro}-desktop
+sudo DEBIAN_FRONTEND=noninteractive apt install -y ros-${distro}-desktop
 sudo apt install -y ros-dev-tools
 
 info "ROS 2 $distro installed successfully"
