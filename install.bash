@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -28,10 +27,11 @@ info() {
     echo -e "${GREEN}${1}${NC}"
 }
 
+distro=$1
 distros=$(get_active_ros2_distributions)
 
 # Check if distribution argument is provided
-if [ "$#" -ne 1 ]; then
+if [ -z "$distro" ]; then
     error "Usage: $0 DISTRO_NAME\nAvailable distributions:\n$distros"
 fi
 
@@ -43,10 +43,11 @@ if [ ! -f /etc/os-release ] || ! grep -q "Ubuntu" /etc/os-release; then
     error "Error: This script only works on Ubuntu"
 fi
 
-distro=$1
 
 # Installation based on https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html
 info "Installing ROS 2 $distro"
+
+export DEBIAN_FRONTEND=noninteractive
 
 locale  # check for UTF-8
 
@@ -57,11 +58,9 @@ export LANG=en_US.UTF-8
 
 locale  # verify settings
 
-# TODO: Make sudo optional
-sudo apt install software-properties-common
+sudo apt install -y software-properties-common
 sudo add-apt-repository universe
 
-sudo apt update && sudo apt install curl -y
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
