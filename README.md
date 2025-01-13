@@ -13,3 +13,11 @@ Then you can run the following command to install ROS2:
 ```bash
 curl -s https://raw.githubusercontent.com/JafarAbdi/quick-ros2-install/refs/heads/main/install.bash | bash -s DISTRO_NAME
 ```
+
+If you want to use a snapshot (https://wiki.ros.org/SnapshotRepository), you can pass the sync datestamp as the second argument:
+
+```bash
+curl -s https://raw.githubusercontent.com/JafarAbdi/quick-ros2-install/refs/heads/main/install.bash | bash -s DISTRO_NAME DATESTAMP
+```
+
+See http://snapshots.ros.org/ for the available datestamps for each distro.
