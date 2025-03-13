@@ -30,19 +30,60 @@ warning() {
 }
 
 info() {
-    echo -e "${GREEN}${1}${NC}"
+    if [ -n "${1:-}" ]; then
+      echo -e "${GREEN}${1}${NC}"
+    else
+      echo
+    fi
 }
 
-if [ $# -eq 0 ] || [ $# -gt 2 ]; then
-  error "Usage: $0 DISTRO_NAME [SYNC_DATESTAMP]\nAvailable distributions:\n$(get_active_ros2_distributions)"
+usage() {
+    info "Usage: $0 -d DISTRO [-s DATESTAMP] [-t] [-h]"
+    info
+    info "Options:"
+    info "  -d DISTRO       ROS 2 distribution to install (required)"
+    info "  -s DATESTAMP    Use specific sync datestamp"
+    info "  -t              Use testing repositories"
+    info "  -h              Display this help message"
+    info
+    info "Available distributions:"
+    info "$(get_active_ros2_distributions)"
+    exit 1
+}
+
+# Default values
+distro=""
+sync_datestamp=""
+use_testing=false
+
+# Parse arguments using getopts
+while getopts "d:s:th" opt; do
+  case $opt in
+    d) distro="$OPTARG" ;;
+    s) sync_datestamp="$OPTARG" ;;
+    t) use_testing=true ;;
+    h) usage ;;
+    \?) error "Invalid option: -$OPTARG" ;;
+    :) error "Option -$OPTARG requires an argument." ;;
+  esac
+done
+
+# Shift positional parameters
+shift $((OPTIND-1))
+
+# Validate required arguments
+if [ -z "$distro" ]; then
+    error "Distribution name is required.\nRun '$0 -h' for usage information."
 fi
 
-distro=$1
-sync_datestamp=${2:-}
-distros=$(get_active_ros2_distributions)
+if [ -n "$sync_datestamp" ] && [ "$use_testing" = true ]; then
+    error "Cannot use snapshot (-s) and testing (-t) options together."
+fi
 
-if ! echo "$distros" | grep -qx "$1"; then
-    error "Invalid distribution name: '$1'\nAvailable distributions:\n$distros"
+# Validate distribution
+distros=$(get_active_ros2_distributions)
+if ! echo "$distros" | grep -qx "$distro"; then
+    error "Invalid distribution name: '$distro'\nAvailable distributions:\n$distros"
 fi
 
 if [ -n "$sync_datestamp" ]; then
@@ -61,6 +102,10 @@ info "Installing ROS 2 $distro"
 
 if [ -n "$sync_datestamp" ]; then
     info "Using ROS 2 snapshot repository with sync_datestamp: $sync_datestamp"
+fi
+
+if [ "$use_testing" = true ]; then
+    info "Using ROS 2 testing repositories"
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -83,7 +128,11 @@ if [ -n "$sync_datestamp" ]; then
   echo "deb [arch=$(dpkg --print-architecture)] http://snapshots.ros.org/${distro}/${sync_datestamp}/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros-snapshots.list > /dev/null
 else
   sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+  repo_type="ros2"
+  if [ "$use_testing" = true ]; then
+      repo_type="ros2-testing"
+  fi
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/$repo_type/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 fi
 
 sudo apt update
